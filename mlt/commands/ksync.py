@@ -58,8 +58,10 @@ class KsyncCommand(Command):
             if value:
                 if key == "watch":
                     self._ksync_get([key, "-d"])
-                elif key == "delete":
+                elif key == "delete" and self.args['--ksync-spec']:
                     self._ksync_get([key, self.args['--ksync-spec']])
+                elif key == "create" and
+                    self._ksync_set([])
                 return
 
     def _ksync_get(self, subcommand):
