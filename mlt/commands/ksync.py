@@ -20,7 +20,6 @@
 
 
 import sys
-
 from subprocess import Popen, PIPE
 from termcolor import colored
 
@@ -58,7 +57,7 @@ class KsyncCommand(Command):
         for key, value in {k: self.args[k] for k in KSYNC_SET_APIS}.items():
             if value:
                 if key == "watch":
-                    self._ksync_get([key,"-d"])
+                    self._ksync_get([key, "-d"])
                 elif key == "delete":
                     self._ksync_get([key, self.args['--ksync-spec']])
                 return
@@ -66,7 +65,7 @@ class KsyncCommand(Command):
     def _ksync_get(self, subcommand):
         # TODO: We need to make this call asyncronous,
         # I've done this in the past
-        p = Popen(([KSYNC]+subcommand), stdin=PIPE, stdout=PIPE,
+        p = Popen(([KSYNC] + subcommand), stdin=PIPE, stdout=PIPE,
                   stderr=PIPE)
         output, err = p.communicate()
         print(output.decode("utf-8"))
