@@ -29,7 +29,7 @@ Usage:
   mlt build [--watch]
   mlt deploy [--no-push] [-i | --interactive]
       [--retries=<retries>] [--skip-crd-check] [<kube_spec>]
-  mlt (ksync) (create | delete | doctor | get | version | watch)
+  mlt (ksync) (create | delete [--ksync-spec=<spec>]| doctor | get | version | watch)
   mlt undeploy
   mlt (template | templates) list [--template-repo=<repo>]
 

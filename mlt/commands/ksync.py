@@ -51,25 +51,26 @@ class KsyncCommand(Command):
            watch       Watch configured specs and start syncing files when
                        required.
         """
-        for api in KSYNC_GET_APIS:
-            if self.args[api]:
-                self._ksync_get(api)
-                break
-
-        for api in KSYNC_SET_APIS:
-            if self.args[api]:
-                self._ksync_set(api)
-                break
+        for key, value in {k: self.args[k] for k in KSYNC_GET_APIS}.items():
+            if value:
+                self._ksync_get([key])
+                return
+        for key, value in {k: self.args[k] for k in KSYNC_SET_APIS}.items():
+            if value:
+                if key == "watch":
+                    self._ksync_get([key,"-d"])
+                elif key == "delete":
+                    self._ksync_get([key, self.args['--ksync-spec']])
+                return
 
     def _ksync_get(self, subcommand):
         # TODO: We need to make this call asyncronous,
         # I've done this in the past
-        p = Popen([KSYNC, subcommand], stdin=PIPE, stdout=PIPE,
+        p = Popen(([KSYNC]+subcommand), stdin=PIPE, stdout=PIPE,
                   stderr=PIPE)
         output, err = p.communicate()
+        print(output.decode("utf-8"))
         if not p.returncode:
-            print(output.decode("utf-8"))
-        else:
             print(colored(err.decode("utf-8"), 'red'))
 
     def _ksync_set(self, subcommand):
