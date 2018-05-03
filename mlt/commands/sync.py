@@ -25,14 +25,14 @@ from termcolor import colored
 
 from mlt.commands import Command
 from mlt.utils import (config_helpers, localhost_helpers)
-from mlt.utils.constants import (KSYNC, KSYNC_GET_APIS, KSYNC_SET_APIS)
+from mlt.utils.constants import (SYNC, SYNC_GET_APIS, SYNC_SET_APIS)
 
 
-class KsyncCommand(Command):
+class SyncCommand(Command):
     def __init__(self, args):
-        super(KsyncCommand, self).__init__(args)
-        if not localhost_helpers.check_local_install(KSYNC):
-            error_msg = "{} is not installed locally!".format(KSYNC)
+        super(SyncCommand, self).__init__(args)
+        if not localhost_helpers.check_local_install(SYNC):
+            error_msg = "{} is not installed locally!".format(SYNC)
             print(colored(error_msg.decode("utf-8"), 'red'))
             sys.exit(1)
 
@@ -44,35 +44,35 @@ class KsyncCommand(Command):
            delete      Delete an existing spec
            doctor      Troubleshoot and verify your setup is correct.
            get         Get all specs.
-           update      Update ksync to the latest version.
+           update      Update sync to the latest version.
            version     View the versions of both the local binary and remote
                        service.
            watch       Watch configured specs and start syncing files when
                        required.
         """
-        for key, value in {k: self.args[k] for k in KSYNC_GET_APIS}.items():
+        for key, value in {k: self.args[k] for k in SYNC_GET_APIS}.items():
             if value:
-                self._ksync_get([key])
+                self._sync_get([key])
                 return
-        for key, value in {k: self.args[k] for k in KSYNC_SET_APIS}.items():
+        for key, value in {k: self.args[k] for k in SYNC_SET_APIS}.items():
             if value:
                 if key == "watch":
-                    self._ksync_get([key, "-d"])
-                elif key == "delete" and self.args['--ksync-spec']:
-                    self._ksync_get([key, self.args['--ksync-spec']])
+                    self._sync_get([key, "-d"])
+                elif key == "delete" and self.args['--sync-spec']:
+                    self._sync_get([key, self.args['--sync-spec']])
                 elif key == "create":
-                    self._ksync_set([])
+                    self._sync_set([])
                 return
 
-    def _ksync_get(self, subcommand):
+    def _sync_get(self, subcommand):
         # TODO: We need to make this call asyncronous,
         # I've done this in the past
-        p = Popen(([KSYNC] + subcommand), stdin=PIPE, stdout=PIPE,
+        p = Popen(([SYNC] + subcommand), stdin=PIPE, stdout=PIPE,
                   stderr=PIPE)
         output, err = p.communicate()
         print(output.decode("utf-8"))
         if not p.returncode:
             print(colored(err.decode("utf-8"), 'red'))
 
-    def _ksync_set(self, subcommand):
+    def _sync_set(self, subcommand):
         print("Not Implemented Yet!")

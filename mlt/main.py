@@ -27,10 +27,10 @@ Usage:
       [--registry=<registry> --namespace=<namespace]
       [--skip-crd-check] <name>
   mlt build [--watch]
-  mlt deploy [--no-push] [-i | --interactive]
+  mlt deploy [--no-push] [-i | --interactive] [-s | --sync]
       [--retries=<retries>] [--skip-crd-check] [<kube_spec>]
-  mlt (ksync) (create | delete [--ksync-spec=<spec>] | doctor | get | version
-      | watch)
+  mlt (sync) (create | delete [--sync-spec=<spec>] | doctor | get | version |
+       watch)
   mlt undeploy
   mlt (template | templates) list [--template-repo=<repo>]
 
@@ -65,7 +65,7 @@ from docopt import docopt
 
 import mlt
 from mlt.commands import (BuildCommand, DeployCommand, InitCommand,
-                          KsyncCommand, TemplatesCommand, UndeployCommand)
+                          SyncCommand, TemplatesCommand, UndeployCommand)
 from mlt.utils import regex_checks
 
 # every available command and its corresponding action will go here
@@ -73,7 +73,7 @@ COMMAND_MAP = (
     ('build', BuildCommand),
     ('deploy', DeployCommand),
     ('init', InitCommand),
-    ('ksync', KsyncCommand),
+    ('sync', SyncCommand),
     ('template', TemplatesCommand),
     ('templates', TemplatesCommand),
     ('undeploy', UndeployCommand),
