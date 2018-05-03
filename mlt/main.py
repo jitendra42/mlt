@@ -29,8 +29,8 @@ Usage:
   mlt build [--watch]
   mlt deploy [--no-push] [-i | --interactive]
       [--retries=<retries>] [--skip-crd-check] [<kube_spec>]
-  mlt (ksync) (create | delete [--ksync-spec=<spec>] | doctor | get | version |
-       watch)
+  mlt (ksync) (create | delete [--ksync-spec=<spec>] | doctor | get | version
+      | watch)
   mlt undeploy
   mlt (template | templates) list [--template-repo=<repo>]
 
@@ -123,7 +123,7 @@ def sanitize_input(args, regex=None):
         raise ValueError("Namespace {} not valid. See "
                          "https://kubernetes.io/docs/concepts/overview"
                          "/working-with-objects/names/#names".format(
-            args['--namespace']))
+                            args['--namespace']))
 
     return args
 
