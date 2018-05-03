@@ -60,7 +60,7 @@ class KsyncCommand(Command):
                     self._ksync_get([key, "-d"])
                 elif key == "delete" and self.args['--ksync-spec']:
                     self._ksync_get([key, self.args['--ksync-spec']])
-                elif key == "create" and
+                elif key == "create":
                     self._ksync_set([])
                 return
 
