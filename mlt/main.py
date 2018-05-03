@@ -29,8 +29,8 @@ Usage:
   mlt build [--watch]
   mlt deploy [--no-push] [-i | --interactive]
       [--retries=<retries>] [--skip-crd-check] [<kube_spec>]
-  mlt (ksync) (create | delete [--ksync-spec=<spec>] | doctor | get | version
-      | watch)
+  mlt (sync) (create | delete [--sync-spec=<spec>] | doctor | get | version |
+       watch)
   mlt undeploy
   mlt (template | templates) list [--template-repo=<repo>]
 
@@ -73,7 +73,7 @@ COMMAND_MAP = (
     ('build', BuildCommand),
     ('deploy', DeployCommand),
     ('init', InitCommand),
-    ('ksync', KsyncCommand),
+    ('sync', KsyncCommand),
     ('template', TemplatesCommand),
     ('templates', TemplatesCommand),
     ('undeploy', UndeployCommand),

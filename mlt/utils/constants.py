@@ -32,6 +32,6 @@ TEMPLATE_CONFIG = "parameters.json"
 TEMPLATE_PARAMETERS = "template_parameters"
 
 # Name of the binary used for Ksync/Syncthing pods
-KSYNC = "ksync"
-KSYNC_GET_APIS = ['doctor', 'get', 'version']
-KSYNC_SET_APIS = ['create', 'delete', 'watch']
+SYNC = "ksync"
+SYNC_GET_APIS = ['doctor', 'get', 'version']
+SYNC_SET_APIS = ['create', 'delete', 'watch']
