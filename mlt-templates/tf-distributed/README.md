@@ -1,6 +1,8 @@
 # Distributed TensorFlow MLT Application
 
-A distributed TensorFlow MNIST model which designates worker 0 as the chief.
+A distributed TensorFlow model which designates worker 0 as the chief.
+The model tries to learn the equation of a line with a slope of 8.16
+and an intercept of -19.71.
 
 This template requires that the TFJob Operator is installed on your
 cluster.  The command below shows an example of how to verify if TFJob
