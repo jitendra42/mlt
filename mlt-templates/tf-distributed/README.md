@@ -1,6 +1,6 @@
 # Distributed TensorFlow MLT Application
 
-A distributed TensorFlow matrix multiplication run through the TensorFlow Kubernetes Operator.
+A distributed TensorFlow MNIST model which designates worker 0 as the chief.
 
 This template requires that the TFJob Operator is installed on your
 cluster.  The command below shows an example of how to verify if TFJob

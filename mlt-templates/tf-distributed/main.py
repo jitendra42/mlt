@@ -18,149 +18,190 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-"""Train a simple TF program to verify we can execute ops.
-
-The program does a simple matrix multiplication.
-
-Only the master assigns ops to devices/workers.
-
-The master will assign ops to every task in the cluster. This way we can verify
-that distributed training is working by executing ops on all devices.
-"""
-import argparse
 import json
 import logging
 import numpy as np
 import os
+import socket
+import subprocess
 import tensorflow as tf
+import time
+import multiprocessing
+
+from model import get_model
+
+KUBERNETES = True  # Set true if on k8s. False if local testing.
+
+# Define parameters
+FLAGS = tf.app.flags.FLAGS
+tf.app.flags.DEFINE_float("learning_rate", 0.008, "Initial learning rate.")
+tf.app.flags.DEFINE_integer("steps_to_validate", 10,
+                            "Validate and print loss after this many steps")
+tf.app.flags.DEFINE_integer("is_sync", 1, "Synchronous updates?")
+tf.app.flags.DEFINE_string("train_dir", "/output", "directory to write "
+                                                   "checkpoint files")
+tf.app.flags.DEFINE_integer("num_epochs", 5, "number of epochs")
+tf.app.flags.DEFINE_integer("batch_size", 1024, "batch size")
+tf.app.flags.DEFINE_string("CHECKPOINTS_DIRECTORY", "checkpoints",
+                           "Directory to store checkpoints")
+tf.app.flags.DEFINE_integer("interop", 1, "Number of interop threads")
+tf.app.flags.DEFINE_integer("intraop", multiprocessing.cpu_count() - 1,
+                            "Number of intraop threads")
+
+if not KUBERNETES:
+    tf.app.flags.DEFINE_string("job_name", "ps", "job name: worker or ps")
+    tf.app.flags.DEFINE_integer("task_index", 0, "task index (0)")
+
+# You can turn on the gRPC messages by setting the environment variables below
+# os.environ["GRPC_VERBOSITY"]="DEBUG"
+# os.environ["GRPC_TRACE"] = "all"
+num_inter_op_threads = FLAGS.interop
+num_intra_op_threads = FLAGS.intraop
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Get rid of the AVX, SSE
+os.environ["KMP_BLOCKTIME"] = "0"
+os.environ["KMP_AFFINITY"] = "granularity=thread,compact,1,0"
+os.environ["OMP_NUM_THREADS"] = str(num_intra_op_threads)
 
 
-def parse_args():
-    """Parse the command line arguments."""
-    parser = argparse.ArgumentParser()
+def main(_):
 
-    parser.add_argument(
-        "--sleep_secs",
-        default=0,
-        type=int,
-        help=("Amount of time to sleep at the end"))
+    start_time = time.time()
 
-    # TODO(jlewi): We ignore unknown arguments because the backend is currently
-    # setting some flags to empty values like metadata path.
-    args, _ = parser.parse_known_args()
-    return args
+    MAX_STEPS = 10000  # Maximum steps to train
 
+    logging.info("TensorFlow version: %s", tf.__version__)
+    logging.info("TensorFlow git version: %s", tf.__git_version__)
 
-def run(server, cluster_spec):
-    """Build the graph and run the example.
+    if KUBERNETES:
+        tf_config_json = os.environ.get("TF_CONFIG", "{}")
+        tf_config = json.loads(tf_config_json)
+        logging.info("tf_config: {}".format(tf_config))
 
-    Args:
-      server: The TensorFlow server to use.
+        task = tf_config.get("task", {})
+        task_index = task["index"]
+        job_name = task["type"]
+        logging.info("task: {}".format(task))
 
-    Raises:
-      RuntimeError: If the expected log entries aren't found.
-    """
+        cluster_spec = tf_config.get("cluster", {})
+        logging.info("cluster_spec: {}".format(cluster_spec))
 
-    # construct the graph and create a saver object
-    with tf.Graph().as_default():  # pylint: disable=not-context-manager
-        # The initial value should be such that type is correctly inferred as
-        # float.
-        width = 10
-        height = 10
-        results = []
+    else:   # Local testing
+        task_index = FLAGS.task_index
+        job_name = FLAGS.job_name
+        cluster_spec = {"ps": ["localhost:2222"],
+                        "worker": ["localhost:2223",
+                                   "localhost:2224"]}
 
-        # The master assigns ops to every TFProcess in the cluster.
-        for job_name in cluster_spec.keys():
-            for i in range(len(cluster_spec[job_name])):
-                d = "/job:{0}/task:{1}".format(job_name, i)
-                with tf.device(d):
-                    a = tf.constant(
-                        np.arange(width * height), shape=[height, width])
-                    b = tf.constant(
-                        np.arange(width * height), shape=[height, width])
-                    c = tf.multiply(a, b)
-                    results.append(c)
+    worker_list = cluster_spec.get("worker", "{}")
+    ps_list = cluster_spec.get("ps", "{}")
 
-        init_op = tf.global_variables_initializer()
+    logging.info("job_name: {}".format(job_name))
+    logging.info("task_index: {}".format(task_index))
 
-        if server:
-            target = server.target
+    config = tf.ConfigProto(
+        inter_op_parallelism_threads=num_inter_op_threads,
+        intra_op_parallelism_threads=num_intra_op_threads)
+
+    cluster = tf.train.ClusterSpec(cluster_spec)
+    server = tf.train.Server(cluster, job_name=job_name, task_index=task_index)
+
+    is_sync = (FLAGS.is_sync == 1)  # Synchronous or asynchronous updates
+    is_chief = (task_index == 0)  # Am I the chief node (always task 0)
+
+    if job_name == "ps":
+
+        logging.info("I am parameter server #{}. "
+                     "I will join the server and will "
+                     "need to be explicitly terminated when all jobs end. "
+                     "Kubernetes should do this automatically."
+                     "Otherwise, use CTRL-\\ for manual termination".
+                     format(task_index))
+        server.join()
+
+    elif job_name == "worker":
+
+        if is_chief:
+            logging.info("I am the chief worker {} with task #{}".format(
+                worker_list[task_index], task_index))
         else:
-            # Create a direct session.
-            target = ""
+            logging.info("I am worker {} with task #{}".format(
+                worker_list[task_index], task_index))
 
-        logging.info("Server target: %s", target)
-        with tf.Session(
-                target,
-                config=tf.ConfigProto(log_device_placement=True)) as sess:
-            sess.run(init_op)
-            for r in results:
-                result = sess.run(r)
-                logging.info("Result: %s", result)
+        # Graph
+        worker_device = "/job:{}/task:{}".format(job_name, task_index)
+        setter = tf.train. \
+            replica_device_setter(ps_tasks=len(ps_list),
+                                  worker_device=worker_device)
+        with tf.device(setter):
 
+            """
+            BEGIN: MODEL DEFINE
+            """
+            input_tensor = tf.placeholder(tf.float32)
+            label_tensor = tf.placeholder(tf.float32)
+            model = get_model(input_tensor,
+                              label_tensor,
+                              FLAGS, is_chief,
+                              MAX_STEPS,
+                              len(worker_list))
+            """
+            END: MODEL DEFINE
+            """
 
-def main():
-    """Run training.
+        # Monitored Training Session
+        checkpoint_dir = None
+        # if is_chief:
+        #     checkpoint_dir = FLAGS.CHECKPOINTS_DIRECTORY
+        # else:
+        #     checkpoint_dir = None
 
-    Raises:
-      ValueError: If the arguments are invalid.
-    """
-    logging.info("Tensorflow version: %s", tf.__version__)
-    logging.info("Tensorflow git version: %s", tf.__git_version__)
+        params = dict(master=server.target,
+                      is_chief=is_chief,
+                      config=config,
+                      hooks=model["hooks"],
+                      checkpoint_dir=checkpoint_dir,
+                      stop_grace_period_secs=10)
+        sess = tf.train.MonitoredTrainingSession(**params)
 
-    tf_config_json = os.environ.get("TF_CONFIG", "{}")
-    tf_config = json.loads(tf_config_json)
-    logging.info("tf_config: %s", tf_config)
+        logging.info("Starting training on worker {}".format(task_index))
 
-    task = tf_config.get("task", {})
-    logging.info("task: %s", task)
+        if is_chief:
+            time.sleep(5)
 
-    cluster_spec = tf_config.get("cluster", {})
-    logging.info("cluster_spec: %s", cluster_spec)
+        """
+        Just predict a simple line.
+        """
+        slope = 8.16
+        intercept = -19.71
 
-    server = None
-    device_func = None
-    if cluster_spec:
-        cluster_spec_object = tf.train.ClusterSpec(cluster_spec)
-        server_def = tf.train.ServerDef(
-            cluster=cluster_spec_object.as_cluster_def(),
-            protocol="grpc",
-            job_name=task["type"],
-            task_index=task["index"])
+        while not sess.should_stop():
 
-        logging.info("server_def: %s", server_def)
+            train_x = np.random.randn(1)*10
+            train_y = slope * train_x + \
+                intercept + np.random.randn(1) * 0.33
 
-        logging.info("Building server.")
-        # Create and start a server for the local task.
-        server = tf.train.Server(server_def)
-        logging.info("Finished building server.")
+            _, result, loss, m, b, step = sess.run([model["optimizer"],
+                                                    model["prediction"],
+                                                    model["loss"],
+                                                    model["m"], model["b"],
+                                                    model["global_step"]],
+                                                   feed_dict={
+                input_tensor: train_x,
+                label_tensor: train_y})
 
-        # Assigns ops to the local worker by default.
-        device_func = tf.train.replica_device_setter(
-            worker_device="/job:worker/task:%d" % server_def.task_index,
-            cluster=server_def.cluster)
-    else:
-        # This should return a null op device setter since we are using
-        # all the defaults.
-        logging.error("Using default device function.")
-        device_func = tf.train.replica_device_setter()
+            logging.info("worker {}, step {}: loss = {:.4}, "
+                         "target: [{}, {}], prediction: [{:.4}, {:.4}]".
+                         format(task_index, step, loss,
+                                slope, intercept, m, b))
 
-    job_type = task.get("type", "").lower()
-    if job_type == "ps":
-        logging.info("Running PS code.")
-        server.join()
-    elif job_type == "worker":
-        logging.info("Running Worker code.")
-        # The worker just blocks because we let the master assign all ops.
-        server.join()
-    elif job_type == "master" or not job_type:
-        logging.info("Running master.")
-        with tf.device(device_func):
-            run(server=server, cluster_spec=cluster_spec)
-    else:
-        raise ValueError("invalid job_type %s" % (job_type,))
+        logging.info("Finished on task {}".format(task_index))
+
+        logging.info(
+            "Session from worker {} closed cleanly".format(task_index))
 
 
 if __name__ == "__main__":
+
     logging.getLogger().setLevel(logging.INFO)
-    main()
+    tf.app.run()

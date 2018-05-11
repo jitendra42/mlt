@@ -1,25 +1,25 @@
 apiVersion: "kubeflow.org/v1alpha1"
 kind: TFJob
 metadata:
-  name: $app-$run
+  name: tf-dist-mnist-42742670-3ea8-4ef7-97f0-ac044c2a046f
   labels:
-    mlt-app-name: $app
+    mlt-app-name: tf-dist-mnist
 spec:
   replicaSpecs:
-    - replicas: $num_ps
+    - replicas: 1
       tfReplicaType: PS
       template:
         spec:
           containers:
-            - image: $image
+            - image: gcr.io/constant-cubist-173123/tf-dist-mnist:ba3d4bd2-e95f-4784-b9e8-02ff01792f3a
               name: tensorflow
           restartPolicy: OnFailure
-    - replicas: $num_workers
+    - replicas: 2
       tfReplicaType: WORKER
       template:
         spec:
           containers:
-            - image: $image
+            - image: gcr.io/constant-cubist-173123/tf-dist-mnist:ba3d4bd2-e95f-4784-b9e8-02ff01792f3a
               name: tensorflow
           restartPolicy: OnFailure
   terminationPolicy:

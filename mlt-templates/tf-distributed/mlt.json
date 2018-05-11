@@ -1,0 +1,9 @@
+{
+  "gceProject": "constant-cubist-173123", 
+  "namespace": "ganthony", 
+  "name": "tf-dist-mnist", 
+  "template_parameters": {
+    "num_ps": "1", 
+    "num_workers": "2"
+  }
+}
