@@ -148,7 +148,6 @@ def main(_):
             """
             model = get_model(data,
                               FLAGS,
-                              is_chief,
                               len(worker_list))
             """
             END: MODEL DEFINE
@@ -174,8 +173,8 @@ def main(_):
             logging.info("Starting training on worker {}".format(
                 task_index))
 
-            if is_chief:
-                time.sleep(5)
+            # if is_chief:
+            #     time.sleep(5)
 
             batch_start = 0
             batch_stop = batch_start + FLAGS.batch_size
