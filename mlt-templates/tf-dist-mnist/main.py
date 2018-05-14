@@ -169,61 +169,66 @@ def main(_):
                       hooks=model["hooks"],
                       checkpoint_dir=checkpoint_dir,
                       stop_grace_period_secs=10)
-        sess = tf.train.MonitoredTrainingSession(**params)
+        with tf.train.MonitoredTrainingSession(**params) as sess:
 
-        logging.info("Starting training on worker {}".format(task_index))
+            logging.info("Starting training on worker {}".format(
+                task_index))
 
-        if is_chief:
-            time.sleep(5)
+            if is_chief:
+                time.sleep(5)
 
-        batch_start = 0
-        batch_stop = batch_start + FLAGS.batch_size
-        epoch = 1
-        while not sess.should_stop():
-
-            x_train = data["x_train"][batch_start:batch_stop]
-            y_train = data["y_train"][batch_start:batch_stop]
-
-            _, loss, step = sess.run([model["optimizer"],
-                                      model["loss"],
-                                      model["global_step"]],
-                                     feed_dict={
-                model["input_tensor"]: x_train,
-                model["label_tensor"]: y_train})
-
-            batch_start += FLAGS.batch_size
-            if batch_start >= data["num_train"]:
-                batch_start = 0
-                epoch += 1
-                logging.info("Epoch {}, Batch Size = {}".format(
-                    epoch, FLAGS.batch_size))
-
+            batch_start = 0
             batch_stop = batch_start + FLAGS.batch_size
+            epoch = 1
+            while not sess.should_stop():
 
-            logging.info("worker {}, step {} of {}: loss = {:.4}".
-                         format(task_index, step, FLAGS.steps_to_train, loss))
+                x_train = data["x_train"][batch_start:batch_stop]
+                y_train = data["y_train"][batch_start:batch_stop]
 
-            if ((step % FLAGS.steps_to_validate) == 0) and (is_chief):
-                loss, accuracy = sess.run([model["loss"], model["accuracy"]],
-                                          feed_dict={
-                                          model["input_tensor"]:
-                                          data["x_test"],
-                                          model["label_tensor"]:
-                                          data["y_test"]})
+                _, loss, step = sess.run([model["optimizer"],
+                                          model["loss"],
+                                          model["global_step"]],
+                                         feed_dict={
+                    model["input_tensor"]: x_train,
+                    model["label_tensor"]: y_train})
 
-                logging.info("{} test validation: loss = {:.4f}"
-                             ", accuracy of the model is {:.3f}".format(
-                                 data["name"], loss, accuracy))
+                batch_start += FLAGS.batch_size
+                if batch_start >= data["num_train"]:
+                    batch_start = 0
+                    epoch += 1
+                    logging.info("Epoch {}, Batch Size = {}".format(
+                        epoch, FLAGS.batch_size))
 
-        if is_chief:
-            loss, accuracy = sess.run([model["loss"], model["accuracy"]],
-                                      feed_dict={
-                model["input_tensor"]: data["x_test"],
-                model["label_tensor"]: data["y_test"]})
+                batch_stop = batch_start + FLAGS.batch_size
 
-            logging.info("Final validation on test set: loss = {:.4f}"
-                         ", accuracy = {:.3f}".format(
-                             loss, accuracy))
+                logging.info("worker {}, step {} of {}: loss = {:.4}".
+                             format(task_index,
+                                    step,
+                                    FLAGS.steps_to_train,
+                                    loss))
+
+                if ((step % FLAGS.steps_to_validate) == 0) and is_chief:
+                    loss, accuracy = sess.run([model["loss"],
+                                               model["accuracy"]],
+                                              feed_dict={
+                                              model["input_tensor"]:
+                                              data["x_test"],
+                                              model["label_tensor"]:
+                                              data["y_test"]})
+
+                    logging.info("{} test validation: loss = {:.4f}"
+                                 ", accuracy of the model is {:.3f}".format(
+                                     data["name"], loss, accuracy))
+
+            # if is_chief:
+            #     loss, accuracy = sess.run([model["loss"], model["accuracy"]],
+            #                               feed_dict={
+            #         model["input_tensor"]: data["x_test"],
+            #         model["label_tensor"]: data["y_test"]})
+            #
+            #     logging.info("Final validation on test set: loss = {:.4f}"
+            #                  ", accuracy = {:.3f}".format(
+            #                      loss, accuracy))
 
         logging.info("Finished on task {}".format(task_index))
 
