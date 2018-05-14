@@ -148,6 +148,7 @@ def main(_):
             """
             model = get_model(data,
                               FLAGS,
+                              is_chief,
                               len(worker_list))
             """
             END: MODEL DEFINE

@@ -28,9 +28,7 @@ Next step is to move to Krishna's python class
 """
 
 
-def get_model(data, FLAGS, num_replicas):
-
-    is_chief = FLAGS.task_index == 0
+def get_model(data, FLAGS, is_chief, num_replicas):
 
     with tf.variable_scope("Inf_Graph", reuse=tf.AUTO_REUSE):
 
