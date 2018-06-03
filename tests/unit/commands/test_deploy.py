@@ -102,7 +102,8 @@ def deploy(no_push, skip_crd_check, interactive, extra_config_args, retries=5):
     deploy = DeployCommand(
         {'deploy': True, '--no-push': no_push,
          '--skip-crd-check': skip_crd_check,
-         '--interactive': interactive, '--retries': retries})
+         '--interactive': interactive, '--retries': retries,
+         '--logs':False})
     deploy.config = {'name': 'app', 'namespace': 'namespace'}
     deploy.config.update(extra_config_args)
 

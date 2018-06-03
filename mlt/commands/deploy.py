@@ -29,7 +29,8 @@ from termcolor import colored
 
 from mlt.commands import Command
 from mlt.utils import (build_helpers, config_helpers, files,
-                       kubernetes_helpers, progress_bar, process_helpers)
+                       kubernetes_helpers, progress_bar,
+                       process_helpers, log_helpers)
 
 
 class DeployCommand(Command):
@@ -49,6 +50,9 @@ class DeployCommand(Command):
             self._push()
 
         self._deploy_new_container()
+
+        if self.args["--logs"]:
+            self._tail_logs()
 
     def _push(self):
         last_push_duration = files.fetch_action_arg(
@@ -300,3 +304,6 @@ class DeployCommand(Command):
         process_helpers.run_popen(
             ["kubectl", "exec", "-it", podname, "--namespace", self.namespace,
              "/bin/bash"], stdout=None, stderr=None).wait()
+
+    def _tail_logs(self):
+        log_helpers.call_logs(self.config, self.args)

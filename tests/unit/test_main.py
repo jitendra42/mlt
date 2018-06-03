@@ -42,9 +42,9 @@ def test_run_command(command):
 
 @pytest.mark.parametrize('args',
                          [{'<name>': 'Capitalized-Name',
-                           '-i': False, '--retries': '5'},
-                          {'-i': True, '<name>': 'foo', '--retries': '5'},
-                          {'-i': True, '<name>': 'foo', '--retries': '8'}])
+                           '-i': False, "-l": False, '--retries': '5'},
+                          {'-i': True, "-l": False, '<name>': 'foo', '--retries': '5'},
+                          {'-i': True, "-l": False, '<name>': 'foo', '--retries': '8'}])
 @patch('mlt.main.docopt')
 @patch('mlt.main.run_command')
 def test_main_various_args(run_command, docopt, args):
@@ -62,7 +62,8 @@ def test_main_various_args(run_command, docopt, args):
 def test_main_invalid_names(docopt_mock):
     """ Test that an invalid name throws a ValueError """
     args = {
-        # underscore should not be allowed in name
+        # underscore should not be allowed in name for the init command
+        "init": True,
         "<name>": "foo_bar"
     }
     docopt_mock.return_value = args
@@ -79,6 +80,27 @@ def test_main_invalid_namespace(docopt_mock):
         # underscore should not be allowed in namespace
         "--namespace": "foo_bar",
         "-i": False,
+        "-l": False,
+        "--retries": 5
+    }
+    docopt_mock.return_value = args
+    with pytest.raises(ValueError):
+        main()
+        run_command(args)
+
+@pytest.mark.parametrize("command", [
+    "set",
+    "remove"
+])
+@patch('mlt.main.docopt')
+def test_main_set_remove_name(docopt_mock, command):
+    """ Ensure that set and unset commands require name arg."""
+    args = {
+        command: True,
+        "--namespace": "foo",
+        "<name>": "",
+        "-i": False,
+        "-l": False,
         "--retries": 5
     }
     docopt_mock.return_value = args

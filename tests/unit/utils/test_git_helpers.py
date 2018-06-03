@@ -18,13 +18,17 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-from mlt.commands.base import Command  # noqa
-from mlt.commands.build import BuildCommand  # noqa
-from mlt.commands.config import ConfigCommand  # noqa
-from mlt.commands.deploy import DeployCommand  # noqa
-from mlt.commands.init import InitCommand  # noqa
-from mlt.commands.status import StatusCommand  # noqa
-from mlt.commands.templates import TemplatesCommand  # noqa
-from mlt.commands.undeploy import UndeployCommand  # noqa
-from mlt.commands.logs import LogsCommand # noqa
-from mlt.commands.events import EventsCommand  # noqa
+import pytest
+from mock import patch, MagicMock
+
+from mlt.utils import git_helpers
+
+
+@pytest.mark.parametrize("template_repo,is_git", [
+    ("git@github.com:IntelAI/mlt.git", True),
+    ("https://github.com/IntelAI/mlt.git", True),
+    (".", False),
+    ("/home/user/mlt", False)
+])
+def test_is_git_repo(template_repo, is_git):
+    assert git_helpers.is_git_repo(template_repo) == is_git

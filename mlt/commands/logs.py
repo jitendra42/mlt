@@ -18,13 +18,18 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-from mlt.commands.base import Command  # noqa
-from mlt.commands.build import BuildCommand  # noqa
-from mlt.commands.config import ConfigCommand  # noqa
-from mlt.commands.deploy import DeployCommand  # noqa
-from mlt.commands.init import InitCommand  # noqa
-from mlt.commands.status import StatusCommand  # noqa
-from mlt.commands.templates import TemplatesCommand  # noqa
-from mlt.commands.undeploy import UndeployCommand  # noqa
-from mlt.commands.logs import LogsCommand # noqa
-from mlt.commands.events import EventsCommand  # noqa
+from mlt.commands import Command
+from mlt.utils import (config_helpers, log_helpers)
+
+
+class LogsCommand(Command):
+    def __init__(self, args):
+        super(LogsCommand, self).__init__(args)
+        self.config = config_helpers.load_config()
+
+    def action(self):
+        """
+        Display logs from all pods for latest run.
+
+        """
+        log_helpers.call_logs(self.config, self.args)

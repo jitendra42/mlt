@@ -21,11 +21,15 @@
 from setuptools import setup, find_packages
 import versioneer
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(name='mlt',
       version=versioneer.get_version(),
       cmdclass=versioneer.get_cmdclass(),
       description='Machine Learning Container Templates',
-      long_description=open('README.md').read(),
+      long_description=long_description,
+      long_description_content_type="text/markdown",
       author='Intel Nervana',
       author_email='intelnervana@intel.com',
       url='https://github.com/IntelAI/mlt',

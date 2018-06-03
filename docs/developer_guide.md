@@ -24,9 +24,11 @@ Then you can run `mlt` from anywhere and it'll run your current repository codeb
 
 ### E2E Testing Options
 
-`make test-e2e`: Use docker-compose to spin up a testing container and run tests; this uses hyperkube.
+`make test-e2e`: Use docker-compose to spin up a testing container and run tests.
+This is used by circleci to run tests on a Google Cloud test cluster.
 
 `make test-e2e-no-docker`: Use your local environment to run e2e tests, similar to the way `make test` runs unit tests.
+Developers should use this option.
 
 ### External Container Registry
 
